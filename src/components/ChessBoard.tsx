@@ -1,6 +1,5 @@
-import React from 'react';
 import type { Piece, Square } from '../types/chess';
-import { squareToPosition, positionToSquare } from '../utils/chessLogic';
+import { positionToSquare } from '../utils/chessLogic';
 
 interface ChessBoardProps {
   board: (Piece | null)[][];
@@ -26,8 +25,6 @@ const pieceSymbols: Record<string, string> = {
 };
 
 export function ChessBoard({ board, selectedSquare, validMoves, onSquareClick, lastMove }: ChessBoardProps) {
-  const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-  const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
 
   const isSquareHighlighted = (square: Square) => validMoves.includes(square);
   const isSquareSelected = (square: Square) => selectedSquare === square;
@@ -62,16 +59,6 @@ export function ChessBoard({ board, selectedSquare, validMoves, onSquareClick, l
                 {piece && (
                   <span className={piece.color === 'white' ? 'text-white drop-shadow-md' : 'text-black drop-shadow-md'}>
                     {pieceSymbols[`${piece.color}-${piece.type}`]}
-                  </span>
-                )}
-                {rowIndex === 7 && (
-                  <span className="absolute bottom-0.5 right-1 text-xs font-semibold text-neutral-600">
-                    {files[colIndex]}
-                  </span>
-                )}
-                {colIndex === 0 && (
-                  <span className="absolute top-0.5 left-1 text-xs font-semibold text-neutral-600">
-                    {ranks[rowIndex]}
                   </span>
                 )}
               </button>
