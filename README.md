@@ -10,7 +10,5 @@ If time allows, we plan to integrate an adaptive AI opponent that dynamically ad
 - Ishmael Kwayisi
 
 
-## Architecture Diagram Draft
-<img src="./src/assets/architecture.jpg" width="400">
 
 

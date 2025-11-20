@@ -34,3 +34,5 @@ We plan to use:
 - **ChatGPT API (or similar)** for generating tutoring feedback, explanations, and dynamic hints.  
 Additional APIs or libraries may be included as development progresses.
 
+## Architecture Diagram Draft
+<img src="./src/assets/architecture.jpg" width="400">
