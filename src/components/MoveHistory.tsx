@@ -8,49 +8,39 @@ interface MoveHistoryProps {
 }
 
 export function MoveHistory({ moves, onNewGame }: MoveHistoryProps) {
-  const groupedMoves: [Move, Move | null][] = [];
-
+  const grouped: [Move, Move | null][] = [];
   for (let i = 0; i < moves.length; i += 2) {
-    groupedMoves.push([moves[i], moves[i + 1] || null]);
+    grouped.push([moves[i], moves[i + 1] || null]);
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-      <div className="bg-gradient-to-r from-gray-700 to-gray-800 text-white p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <History className="w-6 h-6" />
-          <h2 className="text-xl font-bold">Move History</h2>
+    <div className="move-card">
+      {/* HEADER */}
+      <div className="move-header">
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <History size={22} />
+          <h2>Move History</h2>
         </div>
-        <button
-          onClick={onNewGame}
-          className="bg-white text-gray-800 hover:bg-gray-100 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
-        >
-          <RotateCcw className="w-4 h-4" />
+
+        <button className="move-reset-btn" onClick={onNewGame}>
+          <RotateCcw size={16} />
           New Game
         </button>
       </div>
 
-      <div className="p-4">
+      {/* BODY */}
+      <div className="move-body">
         {moves.length === 0 ? (
-          <p className="text-gray-500 text-center py-8 text-sm">No moves yet. Make your first move!</p>
+          <p className="move-empty">No moves yet. Make your first move!</p>
         ) : (
-          <div className="max-h-96 overflow-y-auto">
-            <div className="space-y-1">
-              {groupedMoves.map(([whiteMove, blackMove], index) => (
-                <div
-                  key={index}
-                  className="grid grid-cols-[auto_1fr_1fr] gap-3 py-2 px-3 hover:bg-gray-50 rounded transition-colors"
-                >
-                  <span className="text-gray-500 font-semibold text-sm">{index + 1}.</span>
-                  <span className="font-mono text-sm font-medium text-gray-800">
-                    {whiteMove.notation}
-                  </span>
-                  <span className="font-mono text-sm font-medium text-gray-800">
-                    {blackMove?.notation || ''}
-                  </span>
-                </div>
-              ))}
-            </div>
+          <div className="move-list">
+            {grouped.map(([wm, bm], idx) => (
+              <div key={idx} className="move-row">
+                <span className="move-number">{idx + 1}.</span>
+                <span className="move-text">{wm.notation}</span>
+                <span className="move-text">{bm?.notation || ""}</span>
+              </div>
+            ))}
           </div>
         )}
       </div>

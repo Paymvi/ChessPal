@@ -1,77 +1,414 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
+/* -------------------------
+   GLOBAL RESET + FONTS
+--------------------------*/
+* {
+  box-sizing: border-box;
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  padding: 0;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+html, body {
+  min-height: 100%;
+  font-family: sans-serif;
+  background: linear-gradient(to bottom right, #0f172a, #1e293b, #0f172a);
+  color: white;
 }
 
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
+  border: none;
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  background: none;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+/* -------------------------
+   PAGE LAYOUT
+--------------------------*/
+.page-container {
+  padding: 2rem;
+  max-width: 1280px;
+  margin: auto;
+}
+
+.header-title {
+  font-size: 3rem;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: .25rem;
+}
+
+.header-subtitle {
+  color: #cbd5e1;
+  text-align: center;
+  font-size: 1.125rem;
+  margin-bottom: 2rem;
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+@media (min-width: 1024px) {
+  .main-grid {
+    grid-template-columns: 1fr 400px;
   }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-} */
+}
+
+/* -------------------------
+   CHESS BOARD WRAPPER
+--------------------------*/
+.chessboard-wrapper {
+  background: #262626;
+  padding: 1rem;
+  display: inline-block;
+  border-radius: 12px;
+  box-shadow: 0px 6px 20px rgba(0,0,0,.4);
+}
+
+/* -------------------------
+   CHESS BOARD GRID
+--------------------------*/
+.chess-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  border: 2px solid #404040;
+}
+
+.chess-square {
+  width: 64px;
+  height: 64px;
+  font-size: 48px;
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  transition: filter .2s ease, background .2s ease;
+}
+
+.chess-square:hover {
+  filter: brightness(1.1);
+}
+
+/* Light / Dark squares */
+.square-light {
+  background: #fef3c7;
+}
+
+.square-dark {
+  background: #b45309;
+}
+
+/* Selected Ring */
+.square-selected {
+  box-shadow: inset 0 0 0 4px #3b82f6;
+}
+
+/* Last Move Highlight */
+.square-lastmove {
+  background: rgba(250, 204, 21, 0.45);
+}
+
+/* Highlight Empty Move Dot */
+.square-highlight::after {
+  content: "";
+  width: 16px;
+  height: 16px;
+  background: #22c55e;
+  border-radius: 50%;
+  position: absolute;
+}
+
+/* Highlight Capture Ring */
+.square-capture {
+  box-shadow: inset 0 0 0 4px #22c55e;
+}
+
+/* White / Black Piece */
+.piece-white {
+  color: white;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.4));
+}
+
+.piece-black {
+  color: black;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.4));
+}
+
+/* -------------------------
+   AI TUTOR CARD
+--------------------------*/
+.card {
+  background: white;
+  color: black;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0px 4px 14px rgba(0,0,0,.15);
+}
+
+.card-header-blue {
+  background: linear-gradient(to right, #2563eb, #1d4ed8);
+  color: white;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+/* Advice Boxes */
+.advice-box {
+  padding: 1rem;
+  border-left: 4px solid;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.advice-info {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #1e40af;
+}
+
+.advice-warning {
+  background: #fef9c3;
+  border-color: #f59e0b;
+  color: #854d0e;
+}
+
+.advice-danger {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #991b1b;
+}
+
+/* Hint Box */
+.hint-box {
+  background: #ecfdf5;
+  color: #065f46;
+  border-left: 4px solid #22c55e;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.hint-title {
+  font-weight: bold;
+  margin-bottom: .25rem;
+}
+
+.hint-sub {
+  font-size: .85rem;
+  margin-top: .25rem;
+}
+
+/* Button */
+.btn-blue {
+  width: 100%;
+  background: #2563eb;
+  color: white;
+  padding: .75rem;
+  font-weight: bold;
+  border-radius: 10px;
+  transition: background .2s ease;
+}
+
+.btn-blue:hover {
+  background: #1d4ed8;
+}
+
+.btn-disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Quick Tips */
+.quicktips-title {
+  font-size: .9rem;
+  font-weight: bold;
+  color: #1f2937;
+}
+
+.quicktips-list {
+  font-size: .75rem;
+  color: #4b5563;
+  margin-top: .5rem;
+}
+
+.quicktips-list li {
+  margin-bottom: .35rem;
+}
+
+/* Stats Box */
+.stats-box {
+  background: #f9fafb;
+  padding: .75rem;
+  border-radius: 8px;
+  font-size: .85rem;
+  color: #374151;
+}
+
+/* -------------------------
+   MOVE HISTORY CARD
+--------------------------*/
+.card-header-gray {
+  background: linear-gradient(to right, #374151, #1f2937);
+  color: white;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-reset {
+  background: white;
+  color: #1f2937;
+  padding: .4rem .75rem;
+  border-radius: 8px;
+  font-size: .85rem;
+  font-weight: 600;
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+  transition: background .2s;
+}
+
+.btn-reset:hover {
+  background: #f5f5f5;
+}
+
+.move-row {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  gap: .75rem;
+  padding: .75rem;
+  border-radius: 8px;
+  transition: background .2s;
+}
+
+.move-row:hover {
+  background: #f3f4f6;
+}
+
+.move-row-number {
+  color: #6b7280;
+  font-weight: bold;
+  font-size: .9rem;
+}
+
+.move-text {
+  font-family: monospace;
+  font-size: .9rem;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+/* Scroll */
+.scrollable {
+  max-height: 24rem;
+  overflow-y: auto;
+}
 
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+
+
+
+
+
+
+/* -------------------------
+   MOVE HISTORY — CLEAN / MODERN
+--------------------------*/
+
+.move-card {
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0px 4px 14px rgba(0,0,0,0.12);
+  overflow: hidden;
+  color: #1f2937;
+}
+
+/* header */
+.move-header {
+  background: linear-gradient(to right, #3f3f46, #27272a);
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: white;
+}
+
+.move-header h2 {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.move-reset-btn {
+  background: white;
+  color: #111827;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  transition: background 0.2s ease;
+}
+
+.move-reset-btn:hover {
+  background: #f3f4f6;
+}
+
+/* inner container */
+.move-body {
+  padding: 18px;
+}
+
+/* empty state */
+.move-empty {
+  text-align: center;
+  padding: 32px 0;
+  font-size: 0.9rem;
+  color: #9ca3af;
+}
+
+/* scrollable list */
+.move-list {
+  max-height: 350px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+/* each row */
+.move-row {
+  display: grid;
+  grid-template-columns: 40px 1fr 1fr;
+  align-items: center;
+
+  padding: 10px 12px;
+  margin-bottom: 4px;
+
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.move-row:hover {
+  background: #f3f4f6;
+}
+
+/* number */
+.move-number {
+  font-weight: 600;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+/* notation */
+.move-text {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.9rem;
+  color: #1f2937;
+  font-weight: 500;
+}
