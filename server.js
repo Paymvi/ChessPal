@@ -10,115 +10,132 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// -----------------------------
-// SETUP ENGINES
-// -----------------------------
+// ---------------------------------------------------
+// INITIALIZE GPT + STOCKFISH
+// ---------------------------------------------------
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const engine = stockfish();
 
-// Initialize Stockfish
 engine.postMessage("uci");
 engine.postMessage("isready");
 
 function runStockfish(fen) {
-  return new Promise(resolve => {
-    let best = "";
+  return new Promise((resolve) => {
+    let bestMove = "";
     let evalScore = 0;
 
     engine.onmessage = (line) => {
+      // Extract eval score
       if (line.includes("score cp")) {
-        // parse evaluation
-        const parts = line.split("score cp ");
-        if (parts[1]) {
-          evalScore = parseInt(parts[1].split(" ")[0], 10) / 100;
+        const score = line.split("score cp ")[1];
+        if (score) {
+          evalScore = parseInt(score.split(" ")[0], 10) / 100;
         }
       }
 
+      // Extract best move
       if (line.includes("bestmove")) {
-        best = line.split("bestmove ")[1].split(" ")[0];
-        resolve({ best, eval: evalScore });
+        bestMove = line.split("bestmove ")[1].split(" ")[0];
+        resolve({ bestMove, eval: evalScore });
       }
     };
 
     engine.postMessage(`position fen ${fen}`);
-    engine.postMessage("go depth 14");
+    engine.postMessage("go depth 20"); // STRONG
   });
 }
 
-// -----------------------------
-// GPT PROMPT BUILDER
-// -----------------------------
-function buildPrompt(gameState, engineData) {
+// ---------------------------------------------------
+// Convert UCI -> SAN using Stockfish
+// ---------------------------------------------------
+function convertUCItoSAN(fen, uciMove) {
+  return new Promise((resolve) => {
+    engine.onmessage = (line) => {
+      if (line.includes("info string")) {
+        const parts = line.split("san ");
+        if (parts[1]) {
+          const san = parts[1].trim();
+          resolve(san);
+        }
+      }
+    };
+
+    engine.postMessage(`position fen ${fen}`);
+    engine.postMessage(`move ${uciMove}`);
+  });
+}
+
+// ---------------------------------------------------
+// PROMPT BUILDER
+// ---------------------------------------------------
+function buildPrompt(gameState, fen, sanMove) {
   return `
-You are a world-class chess coach (2800 Elo), famous for extremely clear, friendly teaching.
+You are a world-class chess coach (2800+ strength).
 
-You **MUST NOT** contradict the engine's tactical choice.
+You ALWAYS obey tactical truth from the engine.  
+You NEVER contradict a forced capture, tactic, hanging piece, or engine-preferred move.
 
----
+Here is the position:
 
-### ENGINE RESULTS:
-- Best move: **${engineData.best}**
-- Eval: **${engineData.eval}**
-- Move history: ${gameState.moveHistory.map(m => m.notation).join(", ")}
+FEN: **${fen}**
+Best engine move (SAN): **${sanMove}**
+Move history: ${gameState.moveHistory.map((m) => m.notation).join(", ")}
 
----
+-------------------------------------
+### TASKS
 
-### TASKS:
-1. **Evaluate the player's last move**
-   - Was it good, bad, inaccurate, or excellent?
-   - ALWAYS mention it with **bold highlights** and at least one emoji.
-   - If incorrect, explain why.
+1. **Evaluate the player’s last move**
+   - Was it good, bad, inaccurate, brilliant?  
+   - ALWAYS include bold text + emojis.  
+   - If the last move missed tactics, explain clearly.
 
-2. **Recommend the correct move**
-   - Use SAN notation when possible.
-   - ALWAYS include **bold** and emojis.
+2. **Recommend the engine move (SAN)**
+   - Clearly show why **${sanMove}** is strongest.  
+   - Use bold text and at least 2 emojis.
 
-3. **Give a long, friendly, readable explanation (150–200 words)**
-   - Long-term plans for BOTH sides
-   - Tactical motifs
-   - Positional ideas
-   - Structure plans (pawn breaks, center control)
-   - Why the engine move is correct
-   - Use bold text + emojis (🔥♟️⚠️✨📘💡)
+3. **Give a long (100–180 words) friendly explanation**
+   - Long-term plans for BOTH sides  
+   - Tactical motifs  
+   - Positional ideas (activity, center, pawn structure)  
+   - Why the engine move works  
+   - No engine-style move lines  
+   - No long variations  
+   - No numeric evals (summaries allowed)
 
-4. **Never give engine lines**
-   - No long move sequences.
-   - No numeric evals (other than natural-language commentary).
-
----
-
-Return JSON:
+-------------------------------------
+Return JSON ONLY:
 {
-  "suggestion": "<short strong recommendation>",
+  "suggestion": "<short recommendation>",
   "explanation": "<long friendly explanation>"
 }
 `;
 }
 
-// -----------------------------
+// ---------------------------------------------------
 // API ROUTE
-// -----------------------------
+// ---------------------------------------------------
 app.post("/api/hhint", async (req, res) => {
   try {
     const { gameState, fen } = req.body;
 
-    // 1) Get engine calculation
+    // 1) Run Stockfish
     const engineData = await runStockfish(fen);
 
-    // 2) Build GPT request
+    // 2) Convert best move to SAN
+    const sanMove = await convertUCItoSAN(fen, engineData.bestMove);
+
+    // 3) Build GPT prompt
+    const prompt = buildPrompt(gameState, fen, sanMove);
+
+    // 4) Ask GPT
     const gptResponse = await client.chat.completions.create({
-      model: "gpt-4o", // HIGH QUALITY MODEL
-      messages: [
-        {
-          role: "user",
-          content: buildPrompt(gameState, engineData),
-        },
-      ],
+      model: "gpt-4o", // high accuracy
+      messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
     });
 
-    const result = JSON.parse(gptResponse.choices[0].message.content);
-    res.json(result);
+    const json = JSON.parse(gptResponse.choices[0].message.content);
+    res.json(json);
 
   } catch (err) {
     console.error(err);
@@ -126,4 +143,7 @@ app.post("/api/hhint", async (req, res) => {
   }
 });
 
-app.listen(3001, () => console.log("Hybrid Chess AI server running on port 3001"));
+// ---------------------------------------------------
+app.listen(3001, () =>
+  console.log("🔥 Hybrid Chess AI server running on port 3001")
+);
