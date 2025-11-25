@@ -30,7 +30,7 @@ export function AITutor({
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <BookOpen size={24} />
           <h2 style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
-            AI Chess Tutor
+             Chess Tutor
           </h2>
         </div>
         {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -83,14 +83,14 @@ export function AITutor({
               paddingTop: "16px",
             }}
           >
-            <h3 className="quicktips-title">Quick Tips</h3>
+            {/* <h3 className="quicktips-title">Quick Tips</h3>
             <ul className="quicktips-list">
               <li>• Control the center squares</li>
               <li>• Develop knights before bishops</li>
               <li>• Castle early for king safety</li>
               <li>• Avoid moving the same piece twice early</li>
               <li>• Always consider opponent threats</li>
-            </ul>
+            </ul> */}
           </div>
 
           {/* STATS */}

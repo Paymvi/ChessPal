@@ -215,7 +215,7 @@ function App() {
   return (
     <div className="page-container">
       <header>
-        <h1 className="header-title">Chess with AI Tutor</h1>
+        <h1 className="header-title">Chess with Built-In Tutor</h1>
         <p className="header-subtitle">Learn and improve your chess skills with real-time guidance</p>
       </header>
 

@@ -22,3 +22,20 @@ npm install stockfish
     GPT is terrible at tactical calculation
     Stockfish is amazing at tactics
     Stockfish is terrible at human explanation
+
+
+Adjusted Stockfish+GPT hint engine with SAN, FEN, and depth 20 search
+- Integrated Stockfish engine backend with FEN-based evaluation
+- Added UCI → SAN conversion to improve GPT understanding
+- Increased engine search depth (14 → 20) for stronger tactical accuracy
+- Forced GPT to respect engine best move to eliminate hallucinated advice
+- Added richer, more structured prompt for higher-quality explanations
+- Updated server route (/api/hhint) to run engine first, then GPT
+- Included FEN generation in App.tsx before hint request
+- Improved hint output formatting (bold/emojis, 150–200 word explanations)
+- Fixed temp Move construction in App.tsx to satisfy TS requirements
+- Added better error handling for hint failures
+
+
+
+Ctrl + shift + F: You can serach teh entire project

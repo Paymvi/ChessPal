@@ -50,20 +50,29 @@ function runStockfish(fen) {
 // ---------------------------------------------------
 function convertUCItoSAN(fen, uciMove) {
   return new Promise((resolve) => {
-    engine.onmessage = (line) => {
-      if (line.includes("info string")) {
-        const parts = line.split("san ");
-        if (parts[1]) {
-          const san = parts[1].trim();
-          resolve(san);
+    let san = null;
+
+    const handler = (line) => {
+      if (line.includes("Legal moves:")) {
+        const moves = line.split("Legal moves:")[1].trim().split(" ");
+        for (const m of moves) {
+          const [uci, notation] = m.split(":");
+          if (uci === uciMove) {
+            san = notation;
+            engine.removeEventListener("message", handler);
+            resolve(san);
+          }
         }
       }
     };
 
+    engine.addEventListener("message", handler);
+
     engine.postMessage(`position fen ${fen}`);
-    engine.postMessage(`move ${uciMove}`);
+    engine.postMessage("d");
   });
 }
+
 
 // ---------------------------------------------------
 // PROMPT BUILDER
