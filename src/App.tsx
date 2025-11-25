@@ -4,7 +4,7 @@ import { ChessBoard } from "./components/ChessBoard";
 import { AITutor } from "./components/AITutor";
 import { MoveHistory } from "./components/MoveHistory";
 
-import type { GameState, Move, Square, AIHint } from "./types/chess";
+import type { GameState, Move, Square, AIHint, Piece } from "./types/chess";
 
 import {
   initializeBoard,
@@ -14,8 +14,6 @@ import {
   isCheckmate,
   getMoveNotation,
 } from "./utils/chessLogic";
-
-import { generateHint } from "./utils/aiTutor";
 
 function App() {
   // -------------------------------------------------------------
@@ -44,14 +42,12 @@ function App() {
   const [hintLoading, setHintLoading] = useState(false);
 
   // -------------------------------------------------------------
-  // INITIAL GAME SETUP (placeholder for future Supabase)
+  // INITIAL SETUP
   // -------------------------------------------------------------
-  useEffect(() => {
-    // no-op for now
-  }, []);
+  useEffect(() => {}, []);
 
   // -------------------------------------------------------------
-  // BOARD INTERACTIONS
+  // BOARD INTERACTION
   // -------------------------------------------------------------
   const handleSquareClick = (square: Square) => {
     const pos = squareToPosition(square);
@@ -60,14 +56,11 @@ function App() {
     if (gameState.checkmate || gameState.stalemate) return;
 
     if (gameState.selectedSquare) {
-      // trying to move selected piece
       if (gameState.validMoves.includes(square)) {
         makeMove(gameState.selectedSquare, square);
       } else if (piece && piece.color === gameState.turn) {
-        // select a different piece of the same side
         selectSquare(square);
       } else {
-        // deselect
         setGameState((prev) => ({
           ...prev,
           selectedSquare: null,
@@ -75,7 +68,6 @@ function App() {
         }));
       }
     } else {
-      // no piece selected yet → select one
       if (piece && piece.color === gameState.turn) {
         selectSquare(square);
       }
@@ -93,7 +85,7 @@ function App() {
   };
 
   // -------------------------------------------------------------
-  // MAKING MOVES
+  // MAKING MOVES — FIXED & CLEAN
   // -------------------------------------------------------------
   const makeMove = (from: Square, to: Square) => {
     const fromPos = squareToPosition(from);
@@ -104,26 +96,25 @@ function App() {
 
     const capturedPiece = gameState.board[toPos.row][toPos.col];
 
-    // copy board
-    const newBoard = gameState.board.map((row) => [...row]);
-
-    // perform move on board copy
+    // Copy board correctly
+    const newBoard = gameState.board.map((r) => [...r]);
     newBoard[toPos.row][toPos.col] = piece;
     newBoard[fromPos.row][fromPos.col] = null;
 
-    // build Move object with placeholder notation
-    let move: Move = {
+    // TEMP move typed as full Move so notation works
+    const fakeMove: Move = {
       from,
       to,
       piece,
       capturedPiece: capturedPiece ?? undefined,
-      notation: "",
+      notation: "", // required placeholder
     };
 
-    // now compute notation using the full move + previous board
-    move = {
-      ...move,
-      notation: getMoveNotation(move, gameState.board),
+    const notation = getMoveNotation(fakeMove, gameState.board);
+
+    const move: Move = {
+      ...fakeMove,
+      notation,
     };
 
     const newTurn = gameState.turn === "white" ? "black" : "white";
@@ -151,17 +142,31 @@ function App() {
   };
 
   // -------------------------------------------------------------
-  // GPT HINT REQUEST
+  // REQUEST GPT HINT + ENGINE
   // -------------------------------------------------------------
   const handleRequestHint = async () => {
     try {
       setHintLoading(true);
       setCurrentHint(null);
 
-      const hint = await generateHint(gameState);
-      setCurrentHint(hint);
+      const fen = boardToFEN(gameState.board, gameState.turn);
+
+      const response = await fetch("http://localhost:3001/api/hint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          gameState,
+          fen,
+        }),
+      });
+
+      const data = await response.json();
+      setCurrentHint({
+        suggestion: data.suggestion,
+        explanation: data.explanation,
+      });
     } catch (err) {
-      console.error("Failed to get hint:", err);
+      console.error(err);
       setCurrentHint({
         suggestion: "Error",
         explanation: "The AI tutor could not load. Try again.",
@@ -172,19 +177,49 @@ function App() {
   };
 
   // -------------------------------------------------------------
+  // FEN BUILDER
+  // -------------------------------------------------------------
+  function boardToFEN(board: (Piece | null)[][], turn: "white" | "black") {
+    let fen = "";
+
+    for (let row = 0; row < 8; row++) {
+      let empty = 0;
+
+      for (let col = 0; col < 8; col++) {
+        const piece = board[row][col];
+
+        if (!piece) {
+          empty++;
+        } else {
+          if (empty > 0) {
+            fen += empty;
+            empty = 0;
+          }
+          const letter = piece.type[0];
+          fen += piece.color === "white" ? letter.toUpperCase() : letter;
+        }
+      }
+
+      if (empty > 0) fen += empty;
+      if (row < 7) fen += "/";
+    }
+
+    fen += turn === "white" ? " w" : " b";
+    fen += " - - 0 1";
+    return fen;
+  }
+
+  // -------------------------------------------------------------
   // RENDER
   // -------------------------------------------------------------
   return (
     <div className="page-container">
       <header>
         <h1 className="header-title">Chess with AI Tutor</h1>
-        <p className="header-subtitle">
-          Learn and improve your chess skills with real-time guidance
-        </p>
+        <p className="header-subtitle">Learn and improve your chess skills with real-time guidance</p>
       </header>
 
       <div className="main-grid">
-        {/* LEFT SIDE: BOARD */}
         <div style={{ textAlign: "center" }}>
           <ChessBoard
             board={gameState.board}
@@ -202,18 +237,15 @@ function App() {
                 borderRadius: "10px",
                 background: "linear-gradient(to right, #f59e0b, #ea580c)",
                 color: "white",
-                boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.4)",
+                boxShadow: "0px 4px 12px rgba(0,0,0,0.4)",
               }}
             >
-              <h2 style={{ fontSize: "1.5rem", fontWeight: "bold" }}>
-                Checkmate!
-              </h2>
+              <h2 style={{ fontSize: "1.5rem", fontWeight: "bold" }}>Checkmate!</h2>
               <p>{gameState.turn === "white" ? "Black" : "White"} wins!</p>
             </div>
           )}
         </div>
 
-        {/* RIGHT SIDE: TUTOR + HISTORY */}
         <div>
           <AITutor
             gameState={gameState}

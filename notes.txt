@@ -1,2 +1,24 @@
 npm install express cors openai dotenv
 npm install react-markdown remark-gfm
+npm install stockfish
+
+
+    Stockfish evaluates the position
+    You send your board (FEN) to Stockfish (local engine or WASM build).
+    Stockfish gives you:
+        best move
+        top 3 moves
+        eval score
+        depth
+        tactics flagged by the engine
+        if any piece is hanging
+        if there is a forced tactic
+        recommended captures
+        if your last move was a blunder/inaccuracy/book move
+        full PV (principal variation)
+
+
+    GPT is amazing at explanation
+    GPT is terrible at tactical calculation
+    Stockfish is amazing at tactics
+    Stockfish is terrible at human explanation

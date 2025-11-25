@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
+import stockfish from "stockfish";
 
 dotenv.config();
 
@@ -9,122 +10,120 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// -----------------------------
+// SETUP ENGINES
+// -----------------------------
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const engine = stockfish();
 
-// -------------------------------------------------------------
-// BUILD GPT PROMPT (High quality, world-class chess coach)
-// -------------------------------------------------------------
-function buildPrompt(gameState) {
+// Initialize Stockfish
+engine.postMessage("uci");
+engine.postMessage("isready");
+
+function runStockfish(fen) {
+  return new Promise(resolve => {
+    let best = "";
+    let evalScore = 0;
+
+    engine.onmessage = (line) => {
+      if (line.includes("score cp")) {
+        // parse evaluation
+        const parts = line.split("score cp ");
+        if (parts[1]) {
+          evalScore = parseInt(parts[1].split(" ")[0], 10) / 100;
+        }
+      }
+
+      if (line.includes("bestmove")) {
+        best = line.split("bestmove ")[1].split(" ")[0];
+        resolve({ best, eval: evalScore });
+      }
+    };
+
+    engine.postMessage(`position fen ${fen}`);
+    engine.postMessage("go depth 14");
+  });
+}
+
+// -----------------------------
+// GPT PROMPT BUILDER
+// -----------------------------
+function buildPrompt(gameState, engineData) {
   return `
-You are a world-class chess coach (2800+ strength), famous for clear, friendly, visually engaging explanations.
-You ALWAYS prioritize concrete tactics before strategic ideas.
+You are a world-class chess coach (2800 Elo), famous for extremely clear, friendly teaching.
 
-===============================
-🏆 **ABSOLUTE RULES (Tactics First!)**
-===============================
-1. Identify **all tactical forcing moves FIRST**:
-   - winning captures
-   - hanging pieces
-   - forks
-   - pins
-   - discovered attacks
-   - check threats
-   - forced mates
-2. If a capture or tactic is the best move, ALWAYS recommend it before any development move.
-3. ONLY if no tactics are available, recommend a strategic or developmental move.
-4. Do NOT hallucinate ideas that contradict the board state.
+You **MUST NOT** contradict the engine's tactical choice.
 
-===============================
-📘 **WHAT YOU MUST OUTPUT (JSON)**
-===============================
+---
+
+### ENGINE RESULTS:
+- Best move: **${engineData.best}**
+- Eval: **${engineData.eval}**
+- Move history: ${gameState.moveHistory.map(m => m.notation).join(", ")}
+
+---
+
+### TASKS:
+1. **Evaluate the player's last move**
+   - Was it good, bad, inaccurate, or excellent?
+   - ALWAYS mention it with **bold highlights** and at least one emoji.
+   - If incorrect, explain why.
+
+2. **Recommend the correct move**
+   - Use SAN notation when possible.
+   - ALWAYS include **bold** and emojis.
+
+3. **Give a long, friendly, readable explanation (150–200 words)**
+   - Long-term plans for BOTH sides
+   - Tactical motifs
+   - Positional ideas
+   - Structure plans (pawn breaks, center control)
+   - Why the engine move is correct
+   - Use bold text + emojis (🔥♟️⚠️✨📘💡)
+
+4. **Never give engine lines**
+   - No long move sequences.
+   - No numeric evals (other than natural-language commentary).
+
+---
+
+Return JSON:
 {
-  "suggestion": "Short headline, the best move (SAN)",
-  "explanation": "150-220 word rich explanation with emojis and bold formatting"
+  "suggestion": "<short strong recommendation>",
+  "explanation": "<long friendly explanation>"
+}
+`;
 }
 
-===============================
-🔥 **CONTENT REQUIREMENTS**
-===============================
-You must include ALL of the following in the explanation:
-
-1. ⭐ **Last Move Evaluation**
-   - Was the player's last move good/inaccurate/bad/excellent?  
-   - Always explain WHY.  
-   - Always include at least **one emoji** here.  
-   - If the last move was poor, suggest what would've been better.
-
-2. 🎯 **Best Next Move (actionable idea)**
-   - State the strongest move in SAN (e.g., **cxd4**, **Nf3**, **Qxd5**).  
-   - Explain **why it works**: tactics or plans.  
-   - Use bold terms (e.g., **center control**, **pawn structure**, **development**).
-
-3. 🧠 **Deep Position Summary (long & rich)**
-   - Who is better and why?  
-   - Long-term plans for BOTH SIDES.  
-   - Tactical motifs in this structure.  
-   - Strategic themes and typical ideas.  
-   - Use emojis like ♟️🔥💡⚠️✨📘.
-
-===============================
-🎨 **STYLE GUIDE**
-===============================
-- Tone: warm, encouraging, smart — like a friendly super-GM coach.
-- Always use bold text for important ideas.  
-- Always include emojis throughout.  
-- Length: **150–220 words**, descriptive and rich.  
-- Use SAN notation (Nf3, cxd4, Qe2).  
-- Do NOT include engine eval numbers or long variations.
-
-===============================
-♟️ **GAME STATE INPUT**
-===============================
-Turn: ${gameState.turn}
-Check: ${gameState.check}
-Checkmate: ${gameState.checkmate}
-Moves: ${gameState.moveHistory.map(m => m.notation).join(", ")}
-
-Describe the position fully based on the board state.
-  `;
-}
-
-
-
-// -------------------------------------------------------------
-// API ENDPOINT — Generate Hint
-// -------------------------------------------------------------
-app.post("/api/hint", async (req, res) => {
+// -----------------------------
+// API ROUTE
+// -----------------------------
+app.post("/api/hhint", async (req, res) => {
   try {
-    const { gameState } = req.body;
+    const { gameState, fen } = req.body;
 
-    const prompt = buildPrompt(gameState);
+    // 1) Get engine calculation
+    const engineData = await runStockfish(fen);
 
-    const response = await client.chat.completions.create({
-      model: "gpt-4.1",           
+    // 2) Build GPT request
+    const gptResponse = await client.chat.completions.create({
+      model: "gpt-4o", // HIGH QUALITY MODEL
       messages: [
-        { role: "system", content: "You are a helpful chess tutor." },
-        { role: "user", content: prompt }
+        {
+          role: "user",
+          content: buildPrompt(gameState, engineData),
+        },
       ],
       response_format: { type: "json_object" },
     });
 
-    const json = JSON.parse(response.choices[0].message.content);
+    const result = JSON.parse(gptResponse.choices[0].message.content);
+    res.json(result);
 
-    res.json(json);
   } catch (err) {
-    console.error("GPT ERROR:", err);
-    res.status(500).json({
-      suggestion: "Error",
-      explanation: "The AI tutor could not load. Check the backend console.",
-    });
+    console.error(err);
+    res.status(500).json({ error: "Hybrid engine failed" });
   }
 });
 
-// -------------------------------------------------------------
-// START SERVER
-// -------------------------------------------------------------
-const PORT = 3001;
-app.listen(PORT, () =>
-  console.log(`ChessPal AI Tutor server running on port ${PORT}`)
-);
+app.listen(3001, () => console.log("Hybrid Chess AI server running on port 3001"));
