@@ -77,48 +77,59 @@ function convertUCItoSAN(fen, uciMove) {
 // ---------------------------------------------------
 // PROMPT BUILDER
 // ---------------------------------------------------
-function buildPrompt(gameState, fen, sanMove) {
+function buildPrompt(gameState, fen, sanMove, lastMoveSAN) {
   return `
-You are a world-class chess coach (2800+ strength).
+You are a world-class chess coach (2800+ Elo).  
+Your #1 rule: **ALWAYS obey engine tactics.**  
+Never contradict a forcing line, capture, tactic, or hanging piece detection.  
+Never offer “strategic” ideas when a forcing tactic is available.
 
-You ALWAYS obey tactical truth from the engine.  
-You NEVER contradict a forced capture, tactic, hanging piece, or engine-preferred move.
+-----------------------------
+POSITION INFO
+-----------------------------
+FEN: ${fen}
+Engine best move (SAN): **${sanMove}**
+Player’s last move: **${lastMoveSAN}**
+Move history: ${gameState.moveHistory.map(m => m.notation).join(", ")}
 
-Here is the position:
+-----------------------------
+WHAT YOU MUST DO
+-----------------------------
 
-FEN: **${fen}**
-Best engine move (SAN): **${sanMove}**
-Move history: ${gameState.moveHistory.map((m) => m.notation).join(", ")}
+### 1. Evaluate the player’s last move
+- Use one of these labels: **Blunder**, **Mistake**, **Inaccuracy**, **Good**, **Excellent**  
+- Always give a *tactical* reason (e.g. “missed pawn capture”, “left a piece hanging”, “ignored forcing move”).  
+- Use at least 1 emoji.  
+- Keep it factual, concise, non-fluffy.
 
--------------------------------------
-### TASKS
+### 2. Recommend the engine move (**${sanMove}**)
+- State clearly *why* the engine prefers it.  
+- Emphasize the tactical reason: winning material, preventing loss, gaining tempo, forcing sequence, exploiting a pin, etc.  
+- Keep this section tight and logical.
 
-1. **Evaluate the player’s last move**
-   - Was it good, bad, inaccurate, brilliant?  
-   - ALWAYS include bold text + emojis.  
-   - If the last move missed tactics, explain clearly.
+### 3. Explain the position (8–12 sentences MAX)
+- Explain key tactical motifs only (pins, forks, discovered attacks, undefended pieces, forcing captures).  
+- Include *only* the relevant positional ideas (development, center control) but **no long-term speculative plans**.  
+- Use **clear, simple language**, minimal fluff.  
+- Include 1–3 emojis (no more).
 
-2. **Recommend the engine move (SAN)**
-   - Clearly show why **${sanMove}** is strongest.  
-   - Use bold text and at least 2 emojis.
+### HARD RULES
+- ❌ No long variations  
+- ❌ No engine-style evaluation numbers  
+- ❌ No fictional “later ideas” unless directly tied to tactics  
+- ❌ No soft storytelling or filler  
+- ✔️ Short, direct, tactical, factual  
+- ✔️ JSON output only
 
-3. **Give a long (100–180 words) friendly explanation**
-   - Long-term plans for BOTH sides  
-   - Tactical motifs  
-   - Positional ideas (activity, center, pawn structure)  
-   - Why the engine move works  
-   - No engine-style move lines  
-   - No long variations  
-   - No numeric evals (summaries allowed)
-
--------------------------------------
+-----------------------------
 Return JSON ONLY:
 {
-  "suggestion": "<short recommendation>",
-  "explanation": "<long friendly explanation>"
+  "suggestion": "<short recommendation including SAN move>",
+  "explanation": "<clear tactical explanation, 8–12 sentences>"
 }
-`;
+  `;
 }
+
 
 // ---------------------------------------------------
 // API ROUTE
