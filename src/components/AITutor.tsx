@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { Lightbulb, ChevronDown, ChevronUp, BookOpen } from "lucide-react";
 import type { GameState, AIHint } from "../types/chess";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
 
 interface AITutorProps {
   gameState: GameState;
@@ -42,10 +45,17 @@ export function AITutor({
                 <Lightbulb size={20} />
                 <div>
                   <p className="hint-title">Hint</p>
-                  <p style={{ marginBottom: "4px" }}>
-                    {currentHint.suggestion}
-                  </p>
-                  <p className="hint-sub">{currentHint.explanation}</p>
+                  
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {currentHint.suggestion}
+                    </ReactMarkdown>
+
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {currentHint.explanation}
+                    </ReactMarkdown>
+
+
+
                 </div>
               </div>
             </div>

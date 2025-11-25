@@ -1,6 +1,13 @@
+@import url("https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,200..800;1,200..800&display=swap");
+
 /* -------------------------
    GLOBAL RESET + FONTS
 --------------------------*/
+
+* {
+    font-family: "Atkinson Hyperlegible Next", sans-serif; 
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -51,7 +58,7 @@ button {
 
 @media (min-width: 1024px) {
   .main-grid {
-    grid-template-columns: 1fr 400px;
+    grid-template-columns: 1fr 800px;
   }
 }
 
@@ -411,4 +418,19 @@ button {
   font-size: 0.9rem;
   color: #1f2937;
   font-weight: 500;
+}
+
+
+
+
+
+
+
+.hint-box p {
+  margin: 8px 0;
+  line-height: 1.55;
+}
+
+.hint-box strong {
+  font-weight: 700;
 }

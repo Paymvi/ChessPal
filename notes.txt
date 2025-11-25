@@ -1,1 +1,2 @@
 npm install express cors openai dotenv
+npm install react-markdown remark-gfm
