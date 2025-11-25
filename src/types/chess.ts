@@ -16,7 +16,7 @@ export interface Move {
   from: Square;
   to: Square;
   piece: Piece;
-  capturedPiece?: Piece;
+  capturedPiece?: Piece | null;
   promotion?: PieceType;
   notation: string;
 }

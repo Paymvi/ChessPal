@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { ChessBoard } from './components/ChessBoard';
-import { AITutor } from './components/AITutor';
-import { MoveHistory } from './components/MoveHistory';
-import type { GameState, Move, Square, AIHint } from './types/chess';
+// src/App.tsx
+import React, { useState, useEffect } from "react";
+import { ChessBoard } from "./components/ChessBoard";
+import { AITutor } from "./components/AITutor";
+import { MoveHistory } from "./components/MoveHistory";
+
+import type { GameState, Move, Square, AIHint } from "./types/chess";
+
 import {
   initializeBoard,
   getValidMoves,
@@ -10,14 +13,17 @@ import {
   isKingInCheck,
   isCheckmate,
   getMoveNotation,
-} from './utils/chessLogic';
-import { generateHint } from './utils/aiTutor';
-// import { supabase } from './lib/supabase';
+} from "./utils/chessLogic";
+
+import { generateHint } from "./utils/aiTutor";
 
 function App() {
+  // -------------------------------------------------------------
+  // GAME STATE
+  // -------------------------------------------------------------
   const [gameState, setGameState] = useState<GameState>({
     board: initializeBoard(),
-    turn: 'white',
+    turn: "white",
     selectedSquare: null,
     validMoves: [],
     moveHistory: [],
@@ -32,17 +38,21 @@ function App() {
   });
 
   const [currentHint, setCurrentHint] = useState<AIHint | null>(null);
-  const [gameId, setGameId] = useState<string | null>(null);
-  const [lastMove, setLastMove] = useState<{ from: Square; to: Square } | null>(null);
+  const [lastMove, setLastMove] = useState<{ from: Square; to: Square } | null>(
+    null
+  );
+  const [hintLoading, setHintLoading] = useState(false);
 
+  // -------------------------------------------------------------
+  // INITIAL GAME SETUP (placeholder for future Supabase)
+  // -------------------------------------------------------------
   useEffect(() => {
-    initializeGame();
+    // no-op for now
   }, []);
 
-  const initializeGame = async () => {
-    // Leaving the supabase code here, just unchanged
-  };
-
+  // -------------------------------------------------------------
+  // BOARD INTERACTIONS
+  // -------------------------------------------------------------
   const handleSquareClick = (square: Square) => {
     const pos = squareToPosition(square);
     const piece = gameState.board[pos.row][pos.col];
@@ -50,73 +60,120 @@ function App() {
     if (gameState.checkmate || gameState.stalemate) return;
 
     if (gameState.selectedSquare) {
+      // trying to move selected piece
       if (gameState.validMoves.includes(square)) {
         makeMove(gameState.selectedSquare, square);
       } else if (piece && piece.color === gameState.turn) {
+        // select a different piece of the same side
         selectSquare(square);
       } else {
-        setGameState(prev => ({
+        // deselect
+        setGameState((prev) => ({
           ...prev,
           selectedSquare: null,
           validMoves: [],
         }));
       }
-    } else if (piece && piece.color === gameState.turn) {
-      selectSquare(square);
+    } else {
+      // no piece selected yet → select one
+      if (piece && piece.color === gameState.turn) {
+        selectSquare(square);
+      }
     }
   };
 
   const selectSquare = (square: Square) => {
     const validMoves = getValidMoves(gameState.board, square, gameState);
-    setGameState(prev => ({
+
+    setGameState((prev) => ({
       ...prev,
       selectedSquare: square,
       validMoves,
     }));
   };
 
-  const makeMove = async (from: Square, to: Square) => {
+  // -------------------------------------------------------------
+  // MAKING MOVES
+  // -------------------------------------------------------------
+  const makeMove = (from: Square, to: Square) => {
     const fromPos = squareToPosition(from);
     const toPos = squareToPosition(to);
+
     const piece = gameState.board[fromPos.row][fromPos.col];
     if (!piece) return;
 
     const capturedPiece = gameState.board[toPos.row][toPos.col];
-    const newBoard = gameState.board.map(row => [...row]);
 
+    // copy board
+    const newBoard = gameState.board.map((row) => [...row]);
+
+    // perform move on board copy
     newBoard[toPos.row][toPos.col] = piece;
     newBoard[fromPos.row][fromPos.col] = null;
 
-    const move: Move = {
-      from, to, piece,
-      capturedPiece: capturedPiece || undefined,
-      notation: getMoveNotation({ from, to, piece, capturedPiece }, gameState.board),
+    // build Move object with placeholder notation
+    let move: Move = {
+      from,
+      to,
+      piece,
+      capturedPiece: capturedPiece ?? undefined,
+      notation: "",
     };
 
-    const newTurn = gameState.turn === 'white' ? 'black' : 'white';
-    const isCheck = isKingInCheck(newBoard, newTurn);
+    // now compute notation using the full move + previous board
+    move = {
+      ...move,
+      notation: getMoveNotation(move, gameState.board),
+    };
 
-    const newGameState: GameState = {
+    const newTurn = gameState.turn === "white" ? "black" : "white";
+    const inCheck = isKingInCheck(newBoard, newTurn);
+
+    const newState: GameState = {
       ...gameState,
       board: newBoard,
       turn: newTurn,
       selectedSquare: null,
       validMoves: [],
       moveHistory: [...gameState.moveHistory, move],
-      check: isCheck,
+      check: inCheck,
       checkmate: false,
       stalemate: false,
     };
 
-    if (isCheck) {
-      newGameState.checkmate = isCheckmate(newBoard, newTurn, newGameState);
+    if (inCheck) {
+      newState.checkmate = isCheckmate(newBoard, newTurn, newState);
     }
 
-    setGameState(newGameState);
+    setGameState(newState);
     setLastMove({ from, to });
     setCurrentHint(null);
   };
 
+  // -------------------------------------------------------------
+  // GPT HINT REQUEST
+  // -------------------------------------------------------------
+  const handleRequestHint = async () => {
+    try {
+      setHintLoading(true);
+      setCurrentHint(null);
+
+      const hint = await generateHint(gameState);
+      setCurrentHint(hint);
+    } catch (err) {
+      console.error("Failed to get hint:", err);
+      setCurrentHint({
+        suggestion: "Error",
+        explanation: "The AI tutor could not load. Try again.",
+      });
+    } finally {
+      setHintLoading(false);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // RENDER
+  // -------------------------------------------------------------
   return (
     <div className="page-container">
       <header>
@@ -127,6 +184,7 @@ function App() {
       </header>
 
       <div className="main-grid">
+        {/* LEFT SIDE: BOARD */}
         <div style={{ textAlign: "center" }}>
           <ChessBoard
             board={gameState.board}
@@ -144,22 +202,24 @@ function App() {
                 borderRadius: "10px",
                 background: "linear-gradient(to right, #f59e0b, #ea580c)",
                 color: "white",
-                boxShadow: "0px 4px 12px rgba(0,0,0,.4)",
+                boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.4)",
               }}
             >
-              <h2 style={{ fontSize: "1.5rem", fontWeight: "bold" }}>Checkmate!</h2>
-              <p>
-                {gameState.turn === 'white' ? 'Black' : 'White'} wins!
-              </p>
+              <h2 style={{ fontSize: "1.5rem", fontWeight: "bold" }}>
+                Checkmate!
+              </h2>
+              <p>{gameState.turn === "white" ? "Black" : "White"} wins!</p>
             </div>
           )}
         </div>
 
+        {/* RIGHT SIDE: TUTOR + HISTORY */}
         <div>
           <AITutor
             gameState={gameState}
-            onRequestHint={() => setCurrentHint(generateHint(gameState))}
+            onRequestHint={handleRequestHint}
             currentHint={currentHint}
+            isLoading={hintLoading}
           />
 
           <MoveHistory

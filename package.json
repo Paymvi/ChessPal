@@ -7,11 +7,16 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server": "node server.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.80.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
     "lucide-react": "^0.553.0",
+    "openai": "^6.9.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
