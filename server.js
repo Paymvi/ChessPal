@@ -1,169 +1,247 @@
+//------------------------------------------------------------
+// IMPORTS
+//------------------------------------------------------------
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
-import stockfish from "stockfish";
+import { spawn } from "child_process";
 
 dotenv.config();
 
+//------------------------------------------------------------
+// VALIDATE API KEY
+//------------------------------------------------------------
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error("❌ Missing OPENAI_API_KEY in .env");
+}
+
+//------------------------------------------------------------
+// EXPRESS APP
+//------------------------------------------------------------
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ---------------------------------------------------
-// INITIALIZE GPT + STOCKFISH
-// ---------------------------------------------------
+//------------------------------------------------------------
+// OPENAI CLIENT
+//------------------------------------------------------------
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const engine = stockfish();
 
-engine.postMessage("uci");
-engine.postMessage("isready");
+//------------------------------------------------------------
+// FUNCTION: Spawn a fresh Stockfish engine for each request
+//------------------------------------------------------------
+function spawnEngine() {
+  const engine = spawn("./engine/stockfish.exe"); // <-- Your path
 
+  engine.stdout.setEncoding("utf8");
+
+  engine.listeners = [];
+
+  engine.stdout.on("data", (data) => {
+    const lines = data.split("\n");
+    lines.forEach((line) => {
+      line = line.trim();
+      if (line.length === 0) return;
+
+      console.log("[SF]", line);
+
+      // Dispatch line to listeners
+      engine.listeners.forEach((fn) => fn(line));
+    });
+  });
+
+  engine.post = (cmd) => {
+    console.log("[SF →]", cmd);
+    engine.stdin.write(cmd + "\n");
+  };
+
+  engine.onLine = (fn) => {
+    engine.listeners.push(fn);
+  };
+
+  return engine;
+}
+
+//------------------------------------------------------------
+// RUN STOCKFISH DEPTH 20 SAFELY
+//------------------------------------------------------------
 function runStockfish(fen) {
-  return new Promise((resolve) => {
-    let bestMove = "";
+  return new Promise((resolve, reject) => {
+    const engine = spawnEngine();
+    let bestMove = null;
     let evalScore = 0;
 
-    engine.onmessage = (line) => {
-      // Extract eval score
+    const handler = (line) => {
+      // Extract evaluation score
       if (line.includes("score cp")) {
-        const score = line.split("score cp ")[1];
-        if (score) {
-          evalScore = parseInt(score.split(" ")[0], 10) / 100;
+        const parts = line.split("score cp ");
+        if (parts[1]) {
+          const score = parseInt(parts[1].split(" ")[0], 10);
+          if (!isNaN(score)) evalScore = score / 100;
         }
       }
 
       // Extract best move
-      if (line.includes("bestmove")) {
-        bestMove = line.split("bestmove ")[1].split(" ")[0];
+      if (line.startsWith("bestmove")) {
+        bestMove = line.split(" ")[1];
+
+        // Remove this handler
+        engine.listeners = engine.listeners.filter((fn) => fn !== handler);
+
+        // Kill Stockfish instance
+        engine.kill();
+
         resolve({ bestMove, eval: evalScore });
       }
     };
 
-    engine.postMessage(`position fen ${fen}`);
-    engine.postMessage("go depth 20"); // STRONG
+    engine.onLine(handler);
+
+    engine.post(`position fen ${fen}`);
+    engine.post("go depth 20"); // HIGH ACCURACY
   });
 }
 
-// ---------------------------------------------------
-// Convert UCI -> SAN using Stockfish
-// ---------------------------------------------------
-function convertUCItoSAN(fen, uciMove) {
-  return new Promise((resolve) => {
-    let san = null;
+//------------------------------------------------------------
+// GPT — Convert UCI → SAN
+//------------------------------------------------------------
+async function convertUCItoSAN(fen, uciMove) {
+  const reply = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "user",
+        content: `
+Convert this UCI move into SAN.
 
-    const handler = (line) => {
-      if (line.includes("Legal moves:")) {
-        const moves = line.split("Legal moves:")[1].trim().split(" ");
-        for (const m of moves) {
-          const [uci, notation] = m.split(":");
-          if (uci === uciMove) {
-            san = notation;
-            engine.removeEventListener("message", handler);
-            resolve(san);
-          }
-        }
-      }
-    };
+FEN: ${fen}
+UCI: ${uciMove}
 
-    engine.addEventListener("message", handler);
-
-    engine.postMessage(`position fen ${fen}`);
-    engine.postMessage("d");
+Return ONLY the SAN move.
+        `,
+      },
+    ],
   });
+
+  return reply.choices[0].message.content.trim();
 }
 
-
-// ---------------------------------------------------
-// PROMPT BUILDER
-// ---------------------------------------------------
+//------------------------------------------------------------
+// PROMPT BUILDER FOR FINAL EXPLANATION
+//------------------------------------------------------------
 function buildPrompt(gameState, fen, sanMove, lastMoveSAN) {
   return `
-You are a world-class chess coach (2800+ Elo).  
-Your #1 rule: **ALWAYS obey engine tactics.**  
-Never contradict a forcing line, capture, tactic, or hanging piece detection.  
-Never offer “strategic” ideas when a forcing tactic is available.
+You are a world-class chess coach (2800+ Elo).
+You MUST always obey Stockfish tactics exactly.
+Your tone is **clear, structured, slightly pedagogical, and highly tactical**.
+Your output should resemble the following section format:
+
+- **Hint** (1–2 sentences, includes the engine move + 1 emoji)
+- **Evaluation of Last Move** (1 paragraph, tactical + 1 emoji)
+- **Position Summary** (5–7 sentences, mix of tactical + light strategic context, 1–2 emojis)
+- **Tactical Motifs** (short bullet list, 3–6 bullets, tactical only + occasional emoji)
+
+Avoid large paragraphs. Keep the writing crisp, structured, and helpful.
 
 -----------------------------
 POSITION INFO
 -----------------------------
 FEN: ${fen}
-Engine best move (SAN): **${sanMove}**
-Player’s last move: **${lastMoveSAN}**
+Engine best move (SAN): ${sanMove}
+Player’s last move: ${lastMoveSAN}
 Move history: ${gameState.moveHistory.map(m => m.notation).join(", ")}
 
 -----------------------------
 WHAT YOU MUST DO
 -----------------------------
 
-### 1. Evaluate the player’s last move
-- Use one of these labels: **Blunder**, **Mistake**, **Inaccuracy**, **Good**, **Excellent**  
-- Always give a *tactical* reason (e.g. “missed pawn capture”, “left a piece hanging”, “ignored forcing move”).  
-- Use at least 1 emoji.  
-- Keep it factual, concise, non-fluffy.
+### PART 1 — Hint
+- Briefly suggest the best move (**${sanMove}**) and why.
+- ONE sentence + ONE emoji.
 
-### 2. Recommend the engine move (**${sanMove}**)
-- State clearly *why* the engine prefers it.  
-- Emphasize the tactical reason: winning material, preventing loss, gaining tempo, forcing sequence, exploiting a pin, etc.  
-- Keep this section tight and logical.
+### PART 2 — Evaluation of the player’s last move
+- Choose exactly one label: **Blunder**, **Mistake**, **Inaccuracy**, **Good**, or **Excellent**.
+- Give a *tactical* explanation for the label (e.g., “missed a forcing capture”, “left a piece hanging”, “ignored a threat”).
+- Keep this 2–4 sentences.
+- Include exactly ONE emoji.
 
-### 3. Explain the position (8–12 sentences MAX)
-- Explain key tactical motifs only (pins, forks, discovered attacks, undefended pieces, forcing captures).  
-- Include *only* the relevant positional ideas (development, center control) but **no long-term speculative plans**.  
-- Use **clear, simple language**, minimal fluff.  
-- Include 1–3 emojis (no more).
+### PART 3 — Position Summary
+- 5–7 sentences.
+- Mix tactical motifs with light positional context.
+- Keep it concrete: piece activity, threats, pins, forks, pressure, space, king safety.
+- DO NOT talk about "long-term plans" unless directly tactical (e.g., “White may castle to neutralize the pressure on f1”).
+- Include 1–2 emojis.
+
+### PART 4 — Tactical Motifs
+- Provide 3–6 bullets.
+- Examples: “knight fork threat”, “pressure on f7”, “weak dark squares”, “loose rook”, “bishop pin”, etc.
+- Tactical only.
 
 ### HARD RULES
-- ❌ No long variations  
-- ❌ No engine-style evaluation numbers  
-- ❌ No fictional “later ideas” unless directly tied to tactics  
-- ❌ No soft storytelling or filler  
-- ✔️ Short, direct, tactical, factual  
-- ✔️ JSON output only
+- ❌ No long speculative plans.
+- ❌ No variations.
+- ❌ No engine eval numbers.
+- ❌ Do NOT contradict Stockfish.
+- ✔️ Must remain structured.
+- ✔️ Must return JSON only.
 
 -----------------------------
 Return JSON ONLY:
 {
-  "suggestion": "<short recommendation including SAN move>",
-  "explanation": "<clear tactical explanation, 8–12 sentences>"
+  "suggestion": "<1–2 sentence hint using SAN move>",
+  "explanation": "<full structured explanation including all sections>"
 }
-  `;
+`;
 }
 
 
-// ---------------------------------------------------
-// API ROUTE
-// ---------------------------------------------------
-app.post("/api/hhint", async (req, res) => {
+
+
+
+//------------------------------------------------------------
+// MAIN ROUTE — GET HINT
+//------------------------------------------------------------
+app.post("/api/hint", async (req, res) => {
   try {
     const { gameState, fen } = req.body;
 
-    // 1) Run Stockfish
-    const engineData = await runStockfish(fen);
+    console.log("\n📨 New /api/hint request");
+    console.log("FEN:", fen);
 
-    // 2) Convert best move to SAN
-    const sanMove = await convertUCItoSAN(fen, engineData.bestMove);
+    // 1. Run Stockfish depth 20
+    const { bestMove } = await runStockfish(fen);
 
-    // 3) Build GPT prompt
-    const prompt = buildPrompt(gameState, fen, sanMove);
+    // 2. Convert UCI → SAN
+    const sanMove = await convertUCItoSAN(fen, bestMove);
 
-    // 4) Ask GPT
-    const gptResponse = await client.chat.completions.create({
-      model: "gpt-4o", // high accuracy
+    // 3. Determine last SAN move
+    const lastMoveSAN =
+      gameState.moveHistory.length > 0
+        ? gameState.moveHistory.at(-1).notation
+        : "None";
+
+    // 4. Build the explanation prompt
+    const prompt = buildPrompt(gameState, fen, sanMove, lastMoveSAN);
+
+    // 5. Ask GPT for final output
+    const reply = await client.chat.completions.create({
+      model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
     });
 
-    const json = JSON.parse(gptResponse.choices[0].message.content);
+    const json = JSON.parse(reply.choices[0].message.content);
     res.json(json);
-
   } catch (err) {
-    console.error(err);
+    console.error("❌ /api/hint failed:", err);
     res.status(500).json({ error: "Hybrid engine failed" });
   }
 });
 
-// ---------------------------------------------------
-app.listen(3001, () =>
-  console.log("🔥 Hybrid Chess AI server running on port 3001")
+//------------------------------------------------------------
+// START SERVER
+//------------------------------------------------------------
+app.listen(3001, "127.0.0.1", () =>
+  console.log("🚀 Server running at http://127.0.0.1:3001")
 );

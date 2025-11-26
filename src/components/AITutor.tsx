@@ -4,12 +4,11 @@ import type { GameState, AIHint } from "../types/chess";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-
 interface AITutorProps {
   gameState: GameState;
   onRequestHint: () => void;
   currentHint: AIHint | null;
-  isLoading: boolean; // ← MUST be here
+  isLoading: boolean;
 }
 
 export function AITutor({
@@ -30,7 +29,7 @@ export function AITutor({
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <BookOpen size={24} />
           <h2 style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
-             Chess Tutor
+            Chess Tutor
           </h2>
         </div>
         {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -45,23 +44,25 @@ export function AITutor({
                 <Lightbulb size={20} />
                 <div>
                   <p className="hint-title">Hint</p>
-                  
+
+                  {/* SAFE MARKDOWN RENDERING */}
+                  {currentHint.suggestion && (
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {currentHint.suggestion}
+                      {String(currentHint.suggestion)}
                     </ReactMarkdown>
+                  )}
 
+                  {currentHint.explanation && (
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {currentHint.explanation}
+                      {String(currentHint.explanation)}
                     </ReactMarkdown>
-
-
-
+                  )}
                 </div>
               </div>
             </div>
           )}
 
-          {/* GET HINT BUTTON */}
+          {/* BUTTON */}
           <button
             onClick={onRequestHint}
             disabled={isLoading || gameState.checkmate || gameState.stalemate}
@@ -74,24 +75,6 @@ export function AITutor({
             <Lightbulb size={20} />
             {isLoading ? "Thinking..." : "Get Hint"}
           </button>
-
-          {/* QUICK TIPS (STATIC) */}
-          <div
-            style={{
-              borderTop: "1px solid #ddd",
-              marginTop: "16px",
-              paddingTop: "16px",
-            }}
-          >
-            {/* <h3 className="quicktips-title">Quick Tips</h3>
-            <ul className="quicktips-list">
-              <li>• Control the center squares</li>
-              <li>• Develop knights before bishops</li>
-              <li>• Castle early for king safety</li>
-              <li>• Avoid moving the same piece twice early</li>
-              <li>• Always consider opponent threats</li>
-            </ul> */}
-          </div>
 
           {/* STATS */}
           <div className="stats-box" style={{ marginTop: "12px" }}>

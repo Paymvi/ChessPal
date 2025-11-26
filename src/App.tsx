@@ -195,7 +195,31 @@ function App() {
             fen += empty;
             empty = 0;
           }
-          const letter = piece.type[0];
+
+          let letter: string;
+          switch (piece.type) {
+            case "pawn":
+              letter = "p";
+              break;
+            case "rook":
+              letter = "r";
+              break;
+            case "knight":
+              letter = "n"; // <- important!
+              break;
+            case "bishop":
+              letter = "b";
+              break;
+            case "queen":
+              letter = "q";
+              break;
+            case "king":
+              letter = "k";
+              break;
+            default:
+              letter = "p";
+          }
+
           fen += piece.color === "white" ? letter.toUpperCase() : letter;
         }
       }
