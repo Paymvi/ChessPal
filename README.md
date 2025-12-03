@@ -9,6 +9,20 @@ If time allows, we plan to integrate an adaptive AI opponent that dynamically ad
 - Chelsea Alysson Ongjoco
 - Ishmael Kwayisi
 
+<br>
 
+## Instructions for running it:
 
+Run the server:
+```
+npm install
+node server.js
+```
 
+Run the client (on a seperate terminal):
+```
+npm run dev
+```
+
+IMPORTANT:
+Make sure you are using node 20
