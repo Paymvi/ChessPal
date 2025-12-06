@@ -103,6 +103,43 @@ function runStockfish(fen) {
   });
 }
 
+app.post("/api/ai-move", async (req, res) => {
+  try {
+    const { fen } = req.body;
+    if (!fen) {
+      return res.status(400).json({ error: "Missing FEN" });
+    }
+
+    console.log("🧠 /api/ai-move FEN:", fen);
+
+    // Correct destructuring: runStockfish returns { bestMove, eval }
+    const { bestMove, eval: evalScore } = await runStockfish(fen);
+
+    if (!bestMove) {
+      console.error("❌ Stockfish returned no bestMove");
+      return res.status(500).json({ error: "No best move from engine" });
+    }
+
+    const from = bestMove.slice(0, 2);      // "e2"
+    const to = bestMove.slice(2, 4);        // "e4"
+    const promotion = bestMove.length === 5 ? bestMove[4] : null;
+
+    console.log("🤖 Engine move:", bestMove, "=>", from, "->", to);
+
+    res.json({
+      uci: bestMove,
+      from,
+      to,
+      promotion,
+      eval: evalScore,
+    });
+  } catch (err) {
+    console.error("❌ /api/ai-move failed:", err);
+    res.status(500).json({ error: "AI move failed" });
+  }
+});
+
+
 //------------------------------------------------------------
 // GPT — Convert UCI → SAN
 //------------------------------------------------------------

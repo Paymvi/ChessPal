@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { ChessBoard } from "./components/ChessBoard";
 import { AITutor } from "./components/AITutor";
+import { useAIOpponent } from "./components/AIOpponent";
 import { MoveHistory } from "./components/MoveHistory";
 
 import type { GameState, Move, Square, AIHint, Piece } from "./types/chess";
@@ -40,6 +41,7 @@ function App() {
     null
   );
   const [hintLoading, setHintLoading] = useState(false);
+  const { aiThinking, getAIMove } = useAIOpponent();
 
   // -------------------------------------------------------------
   // INITIAL SETUP
@@ -50,6 +52,11 @@ function App() {
   // BOARD INTERACTION
   // -------------------------------------------------------------
   const handleSquareClick = (square: Square) => {
+    //Prevents the user from moving during AI turn
+    if(aiThinking){
+      return;
+    }
+    
     const pos = squareToPosition(square);
     const piece = gameState.board[pos.row][pos.col];
 
@@ -88,11 +95,18 @@ function App() {
   // MAKING MOVES — FIXED & CLEAN
   // -------------------------------------------------------------
   const makeMove = (from: Square, to: Square) => {
+    console.log("🧩 makeMove() called with:", from, "→", to);
     const fromPos = squareToPosition(from);
     const toPos = squareToPosition(to);
+    console.log("   Computed positions:", fromPos, "→", toPos);
 
     const piece = gameState.board[fromPos.row][fromPos.col];
-    if (!piece) return;
+    console.log("   Piece at from:", piece);
+
+    if (!piece) {
+      console.error("❌ No piece found for AI move:", from, "→", to);
+      return;
+    }
 
     const capturedPiece = gameState.board[toPos.row][toPos.col];
 
@@ -117,8 +131,14 @@ function App() {
       notation,
     };
 
+    console.log("Gameboard 1:", gameState.board);
+
     const newTurn = gameState.turn === "white" ? "black" : "white";
     const inCheck = isKingInCheck(newBoard, newTurn);
+
+    gameState.turn = newTurn;
+
+    console.log("New turn:", gameState.turn);
 
     const newState: GameState = {
       ...gameState,
@@ -132,14 +152,46 @@ function App() {
       stalemate: false,
     };
 
+    //gameState.
+
+    gameState.board = newState.board;
+
     if (inCheck) {
       newState.checkmate = isCheckmate(newBoard, newTurn, newState);
     }
 
+    if(newTurn === "black" && !newState.checkmate && !newState.stalemate){
+      triggerAIMove(newState);
+    }
+
+    
     setGameState(newState);
     setLastMove({ from, to });
     setCurrentHint(null);
   };
+
+  //Helper function to trigger an AI move
+  async function triggerAIMove(state: GameState){
+    console.log("Who's turn:", gameState.turn);
+    console.log("Gameboard 1:", gameState.board);
+    console.log("Gameboard 2:", state.board);
+    //console.log("Gameboard 3:", );
+    const fen = boardToFEN(state.board, gameState.turn);
+    console.log("📤 Sending FEN to AI:", fen);
+
+    const aiMove = await getAIMove(fen);
+    console.log("📥 AI responded with:", aiMove);
+
+    if(!aiMove || !aiMove.from || !aiMove.to){
+      console.error("❌ Invalid AI move received:", aiMove);
+      return;
+    }
+
+    console.log("🤖 Applying AI move:", aiMove.from, "→", aiMove.to);
+    makeMove(aiMove.from as Square, aiMove.to as Square);
+    
+  }
+
 
   // -------------------------------------------------------------
   // REQUEST GPT HINT + ENGINE
@@ -244,7 +296,7 @@ function App() {
       </header>
 
       <div className="main-grid">
-        <div style={{ textAlign: "center" }}>
+        <div style={{ textAlign: "center"}}>
           <ChessBoard
             board={gameState.board}
             selectedSquare={gameState.selectedSquare}
@@ -252,6 +304,12 @@ function App() {
             onSquareClick={handleSquareClick}
             lastMove={lastMove}
           />
+
+          {aiThinking && (
+            <p style={{ marginTop: "10px", fontStyle: "italic", color: "#888"}}>
+              AI is thinking...
+            </p>
+          )}
 
           {gameState.checkmate && (
             <div
