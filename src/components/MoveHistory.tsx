@@ -1,4 +1,3 @@
-import React from 'react';
 import { History, RotateCcw } from 'lucide-react';
 import type { Move } from '../types/chess';
 

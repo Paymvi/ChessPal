@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { ChessBoard } from "./components/ChessBoard";
 import { AITutor } from "./components/AITutor";
 import { useAIOpponent } from "./components/AIOpponent";
@@ -139,7 +139,7 @@ function App() {
       notation: "", // required placeholder
     };
 
-    const notation = getMoveNotation(fakeMove, gameState.board);
+    const notation = getMoveNotation(fakeMove);
 
     const move: Move = {
       ...fakeMove,

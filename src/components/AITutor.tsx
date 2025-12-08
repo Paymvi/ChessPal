@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Lightbulb, ChevronDown, ChevronUp, BookOpen } from "lucide-react";
 import type { GameState, AIHint } from "../types/chess";
 import ReactMarkdown from "react-markdown";

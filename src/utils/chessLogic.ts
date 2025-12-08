@@ -215,10 +215,10 @@ export function isCheckmate(board: (Piece | null)[][], color: PieceColor, gameSt
   return true;
 }
 
-export function getMoveNotation(move: Move, board: (Piece | null)[][]): string {
+export function getMoveNotation(move: Move): string {
   const piece = move.piece;
-  const from = squareToPosition(move.from);
-  const to = squareToPosition(move.to);
+  //const from = squareToPosition(move.from);
+  //const to = squareToPosition(move.to);
 
   if (piece.type === 'pawn') {
     if (move.capturedPiece) {
