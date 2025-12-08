@@ -4,6 +4,7 @@ import { ChessBoard } from "./components/ChessBoard";
 import { AITutor } from "./components/AITutor";
 import { useAIOpponent } from "./components/AIOpponent";
 import { MoveHistory } from "./components/MoveHistory";
+import { AudioBtn } from "./components/AudioBtn";
 
 import type { GameState, Move, Square, AIHint, Piece } from "./types/chess";
 
@@ -36,12 +37,16 @@ function App() {
     stalemate: false,
   });
 
+
   const [currentHint, setCurrentHint] = useState<AIHint | null>(null);
   const [lastMove, setLastMove] = useState<{ from: Square; to: Square } | null>(
     null
   );
   const [hintLoading, setHintLoading] = useState(false);
   const { aiThinking, getAIMove } = useAIOpponent();
+  const [audioEnabled, setAudioEnabled] = useState(false);
+
+
 
   // -------------------------------------------------------------
   // INITIAL SETUP
@@ -108,7 +113,17 @@ function App() {
       return;
     }
 
+    // Speech functionality announcer
+    const text = to;
+    const speech = new SpeechSynthesisUtterance(text);
+    speech.rate = 0.7;
+
+    if(audioEnabled){
+      window.speechSynthesis.speak(speech);
+    }
+
     const capturedPiece = gameState.board[toPos.row][toPos.col];
+
 
     // Copy board correctly
     const newBoard = gameState.board.map((r) => [...r]);
@@ -158,9 +173,20 @@ function App() {
 
     if (inCheck) {
       newState.checkmate = isCheckmate(newBoard, newTurn, newState);
+          // Checkmate speech
+      if(newState.checkmate){
+          if(audioEnabled){
+            const text = "Checkmate!";
+            const speech = new SpeechSynthesisUtterance(text);
+            speech.rate = 0.7;
+            window.speechSynthesis.speak(speech);
+          }
+      }
     }
 
     if(newTurn === "black" && !newState.checkmate && !newState.stalemate){
+      //Add a little delay before the AI opponent moves
+      setTimeout(() => 2500);
       triggerAIMove(newState);
     }
 
@@ -176,6 +202,9 @@ function App() {
     console.log("Gameboard 1:", gameState.board);
     console.log("Gameboard 2:", state.board);
     //console.log("Gameboard 3:", );
+
+    // Do not hardcode the Black opponents turn
+    // Hardcoding will cause FEN to think its always Black's turn
     const fen = boardToFEN(state.board, gameState.turn);
     console.log("📤 Sending FEN to AI:", fen);
 
@@ -217,6 +246,8 @@ function App() {
         suggestion: data.suggestion,
         explanation: data.explanation,
       });
+
+      console.log("Suggestion: ", data.suggestion)
     } catch (err) {
       console.error(err);
       setCurrentHint({
@@ -286,6 +317,18 @@ function App() {
   }
 
   // -------------------------------------------------------------
+  // AUDIO
+  // -------------------------------------------------------------
+  function audioToggle(){
+    if(audioEnabled){
+      setAudioEnabled(false);
+    }
+    else{
+      setAudioEnabled(true);
+    }
+  }
+
+  // -------------------------------------------------------------
   // RENDER
   // -------------------------------------------------------------
   return (
@@ -326,6 +369,17 @@ function App() {
               <p>{gameState.turn === "white" ? "Black" : "White"} wins!</p>
             </div>
           )}
+
+          <div 
+            style={{
+              paddingTop: "20px",
+          }}>
+            <AudioBtn
+              aEnabled={audioEnabled}
+              aToggle={audioToggle}
+            />
+          </div>
+
         </div>
 
         <div>
