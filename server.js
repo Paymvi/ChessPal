@@ -275,10 +275,29 @@ app.post("/api/hint", async (req, res) => {
     res.status(500).json({ error: "Hybrid engine failed" });
   }
 });
-
 //------------------------------------------------------------
 // START SERVER
 //------------------------------------------------------------
-app.listen(3001, "127.0.0.1", () =>
-  console.log("🚀 Server running at http://127.0.0.1:3001")
-);
+const PORT = process.env.PORT || 3001;
+
+//------------------------------------------------------------
+// SERVE REACT FRONTEND
+//------------------------------------------------------------
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+app.use(express.static(path.join(__dirname, "client/dist")));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "client/dist", "index.html"));
+});
+
+//------------------------------------------------------------
+// LISTEN (MUST BE LAST)
+//------------------------------------------------------------
+app.listen(PORT, () => {
+  console.log("Server running on port " + PORT);
+});
