@@ -26,3 +26,6 @@ npm run dev
 
 IMPORTANT:
 Make sure you are using node 20
+
+Link to our website on Render:
+https://chesspal-5ymk.onrender.com

@@ -45,6 +45,7 @@ function App() {
   const [hintLoading, setHintLoading] = useState(false);
   const { aiThinking, getAIMove } = useAIOpponent();
   const [audioEnabled, setAudioEnabled] = useState(false);
+  //const [audioTutorEnabled, setAudioTutorEnabled] = useState(false);
 
 
 
@@ -247,7 +248,14 @@ function App() {
         explanation: data.explanation,
       });
 
-      console.log("Suggestion: ", data.suggestion)
+      console.log("Suggestion: ", data.suggestion);
+      // if(audioTutorEnabled){
+      //   const textTutor = data.explanation;
+      //   const speechTutor = new SpeechSynthesisUtterance(textTutor);
+      //   speechTutor.rate = 0.7;
+      //   window.speechSynthesis.speak(speechTutor);
+      // }
+
     } catch (err) {
       console.error(err);
       setCurrentHint({
@@ -328,6 +336,15 @@ function App() {
     }
   }
 
+  // function audioTutorToggle(){
+  //   if(audioEnabled){
+  //     setAudioTutorEnabled(false);
+  //   }
+  //   else{
+  //     setAudioTutorEnabled(true);
+  //   }
+  // }
+
   // -------------------------------------------------------------
   // RENDER
   // -------------------------------------------------------------
@@ -383,12 +400,19 @@ function App() {
         </div>
 
         <div>
-          <AITutor
-            gameState={gameState}
-            onRequestHint={handleRequestHint}
-            currentHint={currentHint}
-            isLoading={hintLoading}
-          />
+          <div>
+            <AITutor
+              gameState={gameState}
+              onRequestHint={handleRequestHint}
+              currentHint={currentHint}
+              isLoading={hintLoading}
+            />
+
+            {/* <AudioBtn
+              aEnabled={audioTutorEnabled}
+              aToggle={audioTutorToggle}
+            /> */}
+          </div>
 
           <MoveHistory
             moves={gameState.moveHistory}
