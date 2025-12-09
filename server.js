@@ -279,6 +279,8 @@ app.post("/api/hint", async (req, res) => {
 //------------------------------------------------------------
 // START SERVER
 //------------------------------------------------------------
-app.listen(3001, "127.0.0.1", () =>
-  console.log("🚀 Server running at http://127.0.0.1:3001")
-);
+const PORT = process.env.PORT || 3001;
+
+app.listen(PORT, () => {
+  console.log("Server running on port " + PORT);
+});
