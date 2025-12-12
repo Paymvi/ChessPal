@@ -1,4 +1,5 @@
 // src/App.tsx
+//import supabase from "./config/supabaseClient.ts"; //C:\Capstone\ChessPal\src\config\supabaseClient.ts
 import { useState, useEffect } from "react";
 import { ChessBoard } from "./components/ChessBoard";
 import { AITutor } from "./components/AITutor";
@@ -45,6 +46,7 @@ function App() {
   const [hintLoading, setHintLoading] = useState(false);
   const { aiThinking, getAIMove } = useAIOpponent();
   const [audioEnabled, setAudioEnabled] = useState(false);
+  const [isAIHint, setAIHint] = useState(false);
   //const [audioTutorEnabled, setAudioTutorEnabled] = useState(false);
 
 
@@ -152,6 +154,9 @@ function App() {
     const newTurn = gameState.turn === "white" ? "black" : "white";
     const inCheck = isKingInCheck(newBoard, newTurn);
 
+    // After the player is finished, the AI hint will be disabled
+    setAIHint(true);
+
     gameState.turn = newTurn;
 
     console.log("New turn:", gameState.turn);
@@ -219,7 +224,9 @@ function App() {
 
     console.log("🤖 Applying AI move:", aiMove.from, "→", aiMove.to);
     makeMove(aiMove.from as Square, aiMove.to as Square);
-    
+
+    // After the AI opponent is finished, the AI hint will be enabled
+    setAIHint(false);
   }
 
 
@@ -227,44 +234,46 @@ function App() {
   // REQUEST GPT HINT + ENGINE
   // -------------------------------------------------------------
   const handleRequestHint = async () => {
-    try {
-      setHintLoading(true);
-      setCurrentHint(null);
+    if(!isAIHint){
+      try {
+        setHintLoading(true);
+        setCurrentHint(null);
 
-      const fen = boardToFEN(gameState.board, gameState.turn);
+        const fen = boardToFEN(gameState.board, gameState.turn);
 
-      const response = await fetch("http://localhost:3001/api/hint", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          gameState,
-          fen,
-        }),
-      });
+        const response = await fetch("http://localhost:3001/api/hint", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            gameState,
+            fen,
+          }),
+        });
 
-      const data = await response.json();
-      setCurrentHint({
-        suggestion: data.suggestion,
-        explanation: data.explanation,
-      });
+        const data = await response.json();
+        setCurrentHint({
+          suggestion: data.suggestion,
+          explanation: data.explanation,
+        });
 
-      console.log("Suggestion: ", data.suggestion);
-      // if(audioTutorEnabled){
-      //   const textTutor = data.explanation;
-      //   const speechTutor = new SpeechSynthesisUtterance(textTutor);
-      //   speechTutor.rate = 0.7;
-      //   window.speechSynthesis.speak(speechTutor);
-      // }
+        console.log("Suggestion: ", data.suggestion);
+        // if(audioTutorEnabled){
+        //   const textTutor = data.explanation;
+        //   const speechTutor = new SpeechSynthesisUtterance(textTutor);
+        //   speechTutor.rate = 0.7;
+        //   window.speechSynthesis.speak(speechTutor);
+        // }
 
-    } catch (err) {
-      console.error(err);
-      setCurrentHint({
-        suggestion: "Error",
-        explanation: "The AI tutor could not load. Try again.",
-      });
-    } finally {
-      setHintLoading(false);
-    }
+      } catch (err) {
+        console.error(err);
+        setCurrentHint({
+          suggestion: "Error",
+          explanation: "The AI tutor could not load. Try again.",
+        });
+      } finally {
+        setHintLoading(false);
+      }
+    }  
   };
 
   // -------------------------------------------------------------
@@ -406,6 +415,7 @@ function App() {
               onRequestHint={handleRequestHint}
               currentHint={currentHint}
               isLoading={hintLoading}
+              aIHintBuffer={isAIHint}
             />
 
             {/* <AudioBtn
