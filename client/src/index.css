@@ -226,7 +226,12 @@ button {
 }
 
 .btn-disabled {
+  width: 100%;
   background: #9ca3af;
+  color: white;
+  padding: .75rem;
+  font-weight: bold;
+  border-radius: 10px;
   cursor: not-allowed;
 }
 

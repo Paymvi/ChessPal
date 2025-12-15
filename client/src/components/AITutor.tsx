@@ -9,13 +9,15 @@ interface AITutorProps {
   onRequestHint: () => void;
   currentHint: AIHint | null;
   isLoading: boolean;
+  aIHintBuffer: boolean;
 }
 
 export function AITutor({
   gameState,
   onRequestHint,
   currentHint,
-  isLoading
+  isLoading, 
+  aIHintBuffer
 }: AITutorProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -65,11 +67,14 @@ export function AITutor({
           {/* BUTTON */}
           <button
             onClick={onRequestHint}
-            disabled={isLoading || gameState.checkmate || gameState.stalemate}
+            disabled={isLoading || aIHintBuffer || gameState.checkmate || gameState.stalemate}
             className={
-              gameState.checkmate || gameState.stalemate
-                ? "btn-disabled btn-blue"
-                : "btn-blue"
+                isLoading || 
+                aIHintBuffer || 
+                gameState.checkmate || 
+                gameState.stalemate
+                  ? "btn-disabled opacity-60 cursor-not-allowed"
+                  : "btn-blue" 
             }
           >
             <Lightbulb size={20} />
