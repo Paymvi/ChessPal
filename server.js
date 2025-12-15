@@ -161,7 +161,13 @@ Return ONLY the SAN move.
     ],
   });
 
-  return reply.choices[0].message.content.trim();
+  const raw = reply.choices[0].message.content;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw.trim();
+  }
+
 }
 
 //------------------------------------------------------------
@@ -227,7 +233,7 @@ WHAT YOU MUST DO
 Return JSON ONLY:
 {
   "suggestion": "<1–2 sentence hint using SAN move>",
-  "explanation": "<full structured explanation including all sections>"
+  "explanation": "<full structured explanation including all sections... NOT AN OBJECT>"
 }
 `;
 }

@@ -1,4 +1,6 @@
 // src/App.tsx
+import React from "react";
+
 import { useState, useEffect } from "react";
 import { ChessBoard } from "./components/ChessBoard";
 import { AITutor } from "./components/AITutor";
