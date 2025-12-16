@@ -1,5 +1,13 @@
 {
   "name": "chesspal",
+  "author":{
+    "name":"paymvi",
+    "email":"chelseaalysson.ongjoco@snhu.edu"
+  },
+  "contributors": [
+    {"name":"Chelsea","email":"chelseaalysson.ongjoco@snhu.edu","url":"https://github.com/Paymvi"},
+    {"name":"Ishmael","email":"ishmael.kwayisi@snhu.edu","url":"https://github.com/IshKwayisi1232004"} 
+  ],
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -47,6 +55,5 @@
   "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
   "main": "eslint.config.js",
   "keywords": [],
-  "author": "",
   "license": "ISC"
 }

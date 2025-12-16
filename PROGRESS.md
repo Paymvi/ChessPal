@@ -97,8 +97,10 @@ The UI consists of two main areas:
 
 # Testing
 
-We tested the app continuously, especially while debugging different
-configurations of Stockfish and Node.
+Here is the link to the more formal tests using logs:
+https://docs.google.com/document/d/18z57luN62jeZI_lU55BIiL8z0kRXxxAJQI67Jm2XGUA/edit?usp=sharing
+
+We did a lot of testing during development as well (not just at the end). We especially did a lot of testing when debugging different configurations of Stockfish and Node:
 
 - We tested the different versions of Stockfish and Node through building the project in the terminal. Though, when we ran it, errors appeared regarding the implementation of the libraries within the code files. To remedy the issue, we researched the different errors and tried to adjust accordingly to it in the files. We also had to verify that we had the correct versions of Stockfish and Node installed through ensuring the AI tutor was able to load into the server. In the case the AI tutor failed to load, we would then have to result in changing either versions of Stockfish and/or Node.
 - After the completion of installing Stockfish 17 and Node 20, we tested the Chess App to verify the Chatbot was working. However, we noticed that the AI tutor’s response output was cut short. Initially we copied a working version of our build prompt into our file containing the AI tutor, but after testing it failed to produce a detailed analysis for the player. It also produced a paragraph of text rather than a bulleted list of suggestions. Which prompted us to make several adjustments in our file where we had to specify certain aspects before getting a more satisfying response structure. 
