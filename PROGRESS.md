@@ -2,6 +2,8 @@
 
 We now have a working app in the sense that there is a fully functioning chessboard, and when the player makes a move, the app uses **Stockfish + ChatGPT** to give feedback and guide the user when asked.
 
+Credit to Bolt for making the Chessboard component and ChatGPT for helping us create the copyright license.
+
 <br>
 
 # Design Refinements

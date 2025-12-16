@@ -1,5 +1,14 @@
 {
   "name": "chesspal-backend",
+  "license": "UNLICENSED",
+  "author":{
+    "name":"paymvi",
+    "email":"chelseaalysson.ongjoco@snhu.edu"
+  },
+  "contributors": [
+    {"name":"Chelsea","email":"chelseaalysson.ongjoco@snhu.edu","url":"https://github.com/Paymvi"},
+    {"name":"Ishmael","email":"ishmael.kwayisi@snhu.edu","url":"https://github.com/IshKwayisi1232004"} 
+  ],
   "version": "1.0.0",
   "type": "module",
   "main": "server.js",

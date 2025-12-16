@@ -1,6 +1,8 @@
 import type { Piece, Square } from '../types/chess';
 import { positionToSquare } from '../utils/chessLogic';
 
+// Credit to Bolt for making the Chessboard component
+
 interface ChessBoardProps {
   board: (Piece | null)[][];
   selectedSquare: Square | null;
